@@ -1,8 +1,7 @@
 import { Routes, Route } from 'react-router-dom' 
-import PhoneBook from './pages/PhoneBook'
 import { Global, css } from '@emotion/react'
-// import './index.css'
-// import './App.css'
+import PhoneBook from './pages/PhoneBook'
+import GraphTest from './pages/GraphTest'
 
 const AppRouter = () => {
   return (
@@ -16,6 +15,7 @@ const AppRouter = () => {
       />
       <Routes>
         <Route path="/" element={<PhoneBook />} />
+        <Route path="/graph" element={<GraphTest />} />
       </Routes>
     </>
   )
