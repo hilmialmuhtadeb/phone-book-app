@@ -115,6 +115,11 @@ const AddContact = () => {
   }
 
   const handleSaveContact = async () => {
+    if (!firstName || !lastName || !phoneNumbers[0]) {
+      toast.error('Please fill all fields')
+      return
+    }
+    
     try {
       await insert_contact({
         variables: {
