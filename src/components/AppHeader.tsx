@@ -7,7 +7,7 @@ const StickyHeader = styled.h1`
   padding: 1rem;
   border-bottom: 1px solid #ccc;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 500;
   text-align: center;
   color: black;
   background-color: #eaeaea;

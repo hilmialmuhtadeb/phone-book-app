@@ -41,7 +41,6 @@ const MenuContainer = styled.div`
   justify-content: center;
   gap: .4rem;
   padding: 1rem .5rem;
-  margin-bottom: 1rem;
 `
 const MenuButton = styled.button`
   flex-basis: 2.4rem;
@@ -59,22 +58,23 @@ const SearchInput = styled.input`
   border-radius: 20px;
   font-size: 1rem;
 `
+const Section = styled.section`
+  margin: 1rem 0 2rem;
+`
 const SectionTitle = styled.h1`
-  padding: 1rem;
+  padding: 0 1rem;
   margin-bottom: .5rem;
   font-size: 1.2rem;
   font-weight: 700;
-  text-align: center;
 `
 const ContactCard = styled.div`
   padding: 1rem;
-  margin: .5rem;
+  margin: 0 .5rem;
   border-bottom: 1px solid #aaa;
 `
 const ContactCardBody = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
   position: relative;
 `
 const ContactOptionButton = styled.button`
@@ -97,7 +97,7 @@ const ContactOption = styled.div`
   border-radius: 5px;
   background-color: #fff;
   z-index: 99;
-  &.hide {
+  &.hidden {
     display: none;
   }
 `
@@ -107,21 +107,41 @@ const OptionItem = styled.p`
     background-color: #aaa;
   }
 `
+const ContactInformation = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  width: 100%;
+  overflow: hidden;
+`
 const ContactName = styled.h3`
   margin-bottom: .5rem;
+  font-weight: 500;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
 `
 const ContactNumber = styled.p`
   margin-bottom: .5rem;
+`
+const WarningMessage = styled.p`
+  padding: 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #aaa;
 `
 const PhoneBook = () => {
   const [idFavoriteContact, setIdFavoriteContact] = useState<string[]>([])
   const [favoriteContact, setFavoriteContact] = useState<Contact[]>([])
   const [regularContact, setRegularContact] = useState<Contact[]>([])
-  const { loading, error, data } : QueryResult = useQuery(GET_CONTACT_LIST)
+  const { loading, error, data } : QueryResult = useQuery(GET_CONTACT_LIST, {
+    variables: {
+      limit: 5,
+    }
+  })
 
   const handleToggleContactOption = (id: string) => () => {
     const contactOption = document.querySelector(`#contact-${id}`)
-    contactOption?.classList.toggle('hide')
+    contactOption?.classList.toggle('hidden')
   }
 
   useEffect(() => {
@@ -145,7 +165,7 @@ const PhoneBook = () => {
     setRegularContact(regularContact.filter((item: Contact) => item.id !== contact.id))
     localStorage.setItem('favoriteContact', [...idFavoriteContact, contact.id.toString()].toString())
     const contactOption = document.querySelector(`#contact-${contact.id}`)
-    contactOption?.classList.toggle('hide')
+    contactOption?.classList.toggle('hidden')
   }
 
   const removeItemFromFavoriteContact = (contact: Contact) => () => {
@@ -154,23 +174,23 @@ const PhoneBook = () => {
     setRegularContact([...regularContact, contact])
     localStorage.setItem('favoriteContact', idFavoriteContact.filter((item: string) => item !== contact.id.toString()).toString())
     const contactOption = document.querySelector(`#contact-${contact.id}`)
-    contactOption?.classList.toggle('hide')
+    contactOption?.classList.toggle('hidden')
   }
 
   const renderFavoriteContact = () => {
     if (!favoriteContact) return <p>Loading...</p>
-    if (!favoriteContact.length) return <p>No favorite contact</p>
+    if (!favoriteContact.length) return <WarningMessage>No favorite contact</WarningMessage>
     return favoriteContact.map((contact: Contact) => (
       <ContactCard key={contact.id}>
         <ContactCardBody>
-          <div>
+          <ContactInformation>
             <ContactName>{contact.first_name} {contact.last_name}</ContactName>
             <ContactNumber>{contact.phones[0].number}</ContactNumber>
-          </div>
+          </ContactInformation>
           <ContactOptionButton onClick={handleToggleContactOption(contact.id)}>
             <FontAwesomeIcon icon={faEllipsisVertical} />
           </ContactOptionButton>
-          <ContactOption className='contact-option hide' id={`contact-${contact.id}`}>
+          <ContactOption className='contact-option hidden' id={`contact-${contact.id}`}>
             <OptionItem onClick={removeItemFromFavoriteContact(contact)}>Remove From Favorite</OptionItem>
             <OptionItem>Edit</OptionItem>
             <OptionItem>Delete</OptionItem>
@@ -185,14 +205,14 @@ const PhoneBook = () => {
     return regularContact.map((contact: Contact) => (
       <ContactCard key={contact.id}>
         <ContactCardBody>
-          <div>
+          <ContactInformation>
             <ContactName>{contact.first_name} {contact.last_name}</ContactName>
             <ContactNumber>{contact.phones[0].number}</ContactNumber>
-          </div>
+          </ContactInformation>
           <ContactOptionButton onClick={handleToggleContactOption(contact.id)}>
             <FontAwesomeIcon icon={faEllipsisVertical} />
           </ContactOptionButton>
-          <ContactOption className='contact-option hide' id={`contact-${contact.id}`}>
+          <ContactOption className='contact-option hidden' id={`contact-${contact.id}`}>
             <OptionItem onClick={addItemToFavoriteContact(contact)}>Add To Favorite</OptionItem>
             <OptionItem>Edit</OptionItem>
             <OptionItem>Delete</OptionItem>
@@ -220,11 +240,14 @@ const PhoneBook = () => {
         <SearchInput type="text" placeholder='Type contact name...' />
       </MenuContainer>
 
-      <SectionTitle>Favorite Contact</SectionTitle>
-      { renderFavoriteContact() }
-      
-      <SectionTitle>Regular Contact</SectionTitle>
-      { renderRegularContact() }
+      <Section>
+        <SectionTitle>Favorite Contact</SectionTitle>
+        { renderFavoriteContact() }
+      </Section>
+      <Section>
+        <SectionTitle>Regular Contact</SectionTitle>
+        { renderRegularContact() }
+      </Section>
     </CommonContainer>
   )
 }
