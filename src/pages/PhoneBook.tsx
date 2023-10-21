@@ -1,11 +1,12 @@
-import styled from '@emotion/styled'
-import { QueryResult, gql, useQuery } from '@apollo/client'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { QueryResult, gql, useQuery } from '@apollo/client'
+import styled from '@emotion/styled'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlus, faSort } from '@fortawesome/free-solid-svg-icons'
 import AppHeader from '../components/AppHeader'
 import { Contact } from '../interface/Contact'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus, faSort, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons'
-import { useEffect, useState } from 'react'
+import ContactCard from '../components/ContactCard'
 
 const GET_CONTACT_LIST = gql`
   query GetContactList (
@@ -67,75 +68,48 @@ const SectionTitle = styled.h1`
   font-size: 1.2rem;
   font-weight: 700;
 `
-const ContactCard = styled.div`
-  padding: 1rem;
-  margin: 0 .5rem;
-  border-bottom: 1px solid #aaa;
-`
-const ContactCardBody = styled.div`
-  display: flex;
-  justify-content: space-between;
-  position: relative;
-`
-const ContactOptionButton = styled.button`
-  padding: .5rem 1rem;
-  border: none;
-  border-radius: 5px;
-  background-color: transparent;
-  &:hover {
-    box-shadow: 0 0 5px #aaa;
-  }
-`
-const ContactOption = styled.div`
-  position: absolute;
-  display: block;
-  top: 2.4rem;
-  right: 0;
-  width: 10rem;
-  padding: .5rem 0;
-  border: 1px solid #aaa;
-  border-radius: 5px;
-  background-color: #fff;
-  z-index: 99;
-  &.hidden {
-    display: none;
-  }
-`
-const OptionItem = styled.p`
-  padding: .5rem 1rem;
-  &:hover {
-    background-color: #aaa;
-  }
-`
-const ContactInformation = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
-  width: 100%;
-  overflow: hidden;
-`
-const ContactName = styled.h3`
-  margin-bottom: .5rem;
-  font-weight: 500;
-  line-clamp: 1;
-  -webkit-line-clamp: 1;
-`
-const ContactNumber = styled.p`
-  margin-bottom: .5rem;
-`
 const WarningMessage = styled.p`
   padding: 0 1rem;
   font-size: 1.2rem;
   font-weight: 500;
   color: #aaa;
 `
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  padding: 1rem 0;
+`
+const PaginationButton = styled.button`
+  padding: .5rem 1rem;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  background-color: transparent;
+  font-size: 1rem;
+  &:hover {
+    box-shadow: 0 0 5px #aaa;
+  }
+`
 const PhoneBook = () => {
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [idFavoriteContact, setIdFavoriteContact] = useState<string[]>([])
   const [favoriteContact, setFavoriteContact] = useState<Contact[]>([])
   const [regularContact, setRegularContact] = useState<Contact[]>([])
+  const [offset, setOffset] = useState<number>(0)
+  const [isEndOfContact, setIsEndOfContact] = useState<boolean>(false)
   const { loading, error, data } : QueryResult = useQuery(GET_CONTACT_LIST, {
     variables: {
-      limit: 5,
+      limit: 10,
+      order_by: {
+        first_name: 'asc'
+      },
+      offset: offset,
+      where: {
+        first_name: {
+          _ilike: '%'
+        }
+      }
     }
   })
 
@@ -144,20 +118,30 @@ const PhoneBook = () => {
     contactOption?.classList.toggle('hidden')
   }
 
+  const handleNextPageButton = () => () => {
+    setOffset(offset + 10)
+  }
+
+  // in first page render, check if there is favorite contact in local storage
   useEffect(() => {
     const idFavoriteContact = localStorage.getItem('favoriteContact')?.split(',') || []
     setIdFavoriteContact(idFavoriteContact)
-    const favoriteContact = data?.contact.filter((contact: Contact) => idFavoriteContact.includes(contact.id.toString()))
+    const favoriteContact = contacts.filter((contact: Contact) => idFavoriteContact.includes(contact.id.toString()))
     setFavoriteContact(favoriteContact)
-    // console.log('fav: ', favoriteContact);
-  }, [data?.contact])
+  }, [contacts])
+
+  // in first page render, if there is favorite contact in local storage, filter it from regular contact
+  useEffect(() => {
+    if (!contacts) return
+    const regularContact = contacts.filter((contact: Contact) => !idFavoriteContact.includes(contact.id.toString()))
+    setRegularContact(regularContact)
+  }, [idFavoriteContact, contacts])
 
   useEffect(() => {
-    if (!data) return
-    const regularContact = data.contact.filter((contact: Contact) => !idFavoriteContact.includes(contact.id.toString()))
-    setRegularContact(regularContact)
-    // console.log('reg: ', regularContact);
-  }, [data, idFavoriteContact])
+    if (!data?.contact) return
+    if (data.contact.length == 0) setIsEndOfContact(true) 
+    setContacts(contacts.concat(data?.contact))
+  }, [data?.contact])
 
   const addItemToFavoriteContact = (contact: Contact) => () => {
     setIdFavoriteContact([...idFavoriteContact, contact.id.toString()])
@@ -181,49 +165,34 @@ const PhoneBook = () => {
     if (!favoriteContact) return <p>Loading...</p>
     if (!favoriteContact.length) return <WarningMessage>No favorite contact</WarningMessage>
     return favoriteContact.map((contact: Contact) => (
-      <ContactCard key={contact.id}>
-        <ContactCardBody>
-          <ContactInformation>
-            <ContactName>{contact.first_name} {contact.last_name}</ContactName>
-            <ContactNumber>{contact.phones[0].number}</ContactNumber>
-          </ContactInformation>
-          <ContactOptionButton onClick={handleToggleContactOption(contact.id)}>
-            <FontAwesomeIcon icon={faEllipsisVertical} />
-          </ContactOptionButton>
-          <ContactOption className='contact-option hidden' id={`contact-${contact.id}`}>
-            <OptionItem onClick={removeItemFromFavoriteContact(contact)}>Remove From Favorite</OptionItem>
-            <OptionItem>Edit</OptionItem>
-            <OptionItem>Delete</OptionItem>
-          </ContactOption>
-        </ContactCardBody>
-      </ContactCard>
+      <ContactCard
+        key={contact.id}
+        contact={contact}
+        handleToggleContactOption={handleToggleContactOption}
+        removeItemFromFavoriteContact={removeItemFromFavoriteContact}
+        isRegularContact={false}
+      />
     ))
   }
 
   const renderRegularContact = () => {
     if (!regularContact) return <p>Loading...</p>
+    if (!regularContact.length) return <WarningMessage>There is no contact</WarningMessage>
     return regularContact.map((contact: Contact) => (
-      <ContactCard key={contact.id}>
-        <ContactCardBody>
-          <ContactInformation>
-            <ContactName>{contact.first_name} {contact.last_name}</ContactName>
-            <ContactNumber>{contact.phones[0].number}</ContactNumber>
-          </ContactInformation>
-          <ContactOptionButton onClick={handleToggleContactOption(contact.id)}>
-            <FontAwesomeIcon icon={faEllipsisVertical} />
-          </ContactOptionButton>
-          <ContactOption className='contact-option hidden' id={`contact-${contact.id}`}>
-            <OptionItem onClick={addItemToFavoriteContact(contact)}>Add To Favorite</OptionItem>
-            <OptionItem>Edit</OptionItem>
-            <OptionItem>Delete</OptionItem>
-          </ContactOption>
-        </ContactCardBody>
-      </ContactCard>
+      <ContactCard
+        key={contact.id}
+        contact={contact}
+        handleToggleContactOption={handleToggleContactOption}
+        addItemToFavoriteContact={addItemToFavoriteContact}
+        isRegularContact={true}
+      />
     ))
   }
 
-  if (loading) return <p>Loading...</p>
-  if (error) return <p>Error : {error.message}</p>
+  if (contacts.length === 0) {
+    if (loading) return <p>Loading...</p>
+    if (error) return <p>Error : {error.message}</p>
+  }
   
   return (
     <CommonContainer>
@@ -247,6 +216,13 @@ const PhoneBook = () => {
       <Section>
         <SectionTitle>Regular Contact</SectionTitle>
         { renderRegularContact() }
+      </Section>
+      <Section>
+        { isEndOfContact ? <WarningMessage>All contacts are displayed.</WarningMessage> : (
+          <Pagination>
+            <PaginationButton onClick={ handleNextPageButton() }>Next</PaginationButton>
+          </Pagination>
+        )}
       </Section>
     </CommonContainer>
   )
