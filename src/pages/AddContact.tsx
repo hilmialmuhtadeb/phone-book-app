@@ -1,37 +1,11 @@
 import { useState } from 'react'
-import { gql, useMutation } from '@apollo/client'
+import { useMutation } from '@apollo/client'
 import styled from "@emotion/styled"
 import { toast } from 'react-hot-toast'
 import AppHeader from "../components/AppHeader"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrash } from '@fortawesome/free-solid-svg-icons'
-
-const ADD_CONTACT_WITH_PHONES = gql`
-  mutation AddContactWithPhones(
-    $first_name: String!, 
-    $last_name: String!, 
-    $phones: [phone_insert_input!]!
-    ) {
-    insert_contact(
-        objects: {
-            first_name: $first_name, 
-            last_name: $last_name,
-            phones: { 
-                data: $phones
-            }
-        }
-    ) {
-    returning {
-      first_name
-      last_name
-      id
-      phones {
-        number
-      }
-    }
-  }
-  }
-`
+import { ADD_CONTACT_WITH_PHONES } from '../graphql/contact'
 
 const FormWrapper = styled.div`
   margin: 2rem 0;

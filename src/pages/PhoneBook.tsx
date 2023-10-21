@@ -1,38 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { QueryResult, gql, useQuery } from '@apollo/client'
+import { QueryResult, useMutation, useQuery } from '@apollo/client'
 import styled from '@emotion/styled'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faSort } from '@fortawesome/free-solid-svg-icons'
 import AppHeader from '../components/AppHeader'
 import { Contact } from '../interface/Contact'
 import ContactCard from '../components/ContactCard'
-
-const GET_CONTACT_LIST = gql`
-  query GetContactList (
-    $distinct_on: [contact_select_column!], 
-    $limit: Int, 
-    $offset: Int, 
-    $order_by: [contact_order_by!], 
-    $where: contact_bool_exp
-  ) {
-  contact(
-      distinct_on: $distinct_on, 
-      limit: $limit, 
-      offset: $offset, 
-      order_by: $order_by, 
-      where: $where
-  ){
-    created_at
-    first_name
-    id
-    last_name
-    phones {
-      number
-    }
-  }
-  }
-`
+import { DELETE_CONTACT, GET_CONTACT_LIST } from '../graphql/contact'
+import toast from 'react-hot-toast'
 
 const CommonContainer = styled.div`
   position: relative;
@@ -112,15 +88,7 @@ const PhoneBook = () => {
       }
     }
   })
-
-  const handleToggleContactOption = (id: string) => () => {
-    const contactOption = document.querySelector(`#contact-${id}`)
-    contactOption?.classList.toggle('hidden')
-  }
-
-  const handleNextPageButton = () => () => {
-    setOffset(offset + 10)
-  }
+  const [delete_contact_by_pk, { error: deleteError }] = useMutation(DELETE_CONTACT)
 
   // in first page render, check if there is favorite contact in local storage
   useEffect(() => {
@@ -140,6 +108,7 @@ const PhoneBook = () => {
   useEffect(() => {
     if (!data?.contact) return
     if (data.contact.length == 0) setIsEndOfContact(true) 
+    if (data.contact.length < 10) setIsEndOfContact(true)
     setContacts(contacts.concat(data?.contact))
   }, [data?.contact])
 
@@ -161,6 +130,32 @@ const PhoneBook = () => {
     contactOption?.classList.toggle('hidden')
   }
 
+  const deleteContactById = (id: string) => async () => {
+    try {
+      await delete_contact_by_pk({
+        variables: {
+          id
+        }
+      })
+      setContacts(contacts.filter((contact: Contact) => contact.id !== id))
+      toast.success('Contact deleted successfully')
+    } catch(err) {
+      if (deleteError) {
+        toast.error(deleteError?.message)
+      }
+      toast.error('Failed deleting contact')
+    }
+  }
+  
+  const handleToggleContactOption = (id: string) => () => {
+    const contactOption = document.querySelector(`#contact-${id}`)
+    contactOption?.classList.toggle('hidden')
+  }
+
+  const handleNextPageButton = () => () => {
+    setOffset(offset + 10)
+  }
+
   const renderFavoriteContact = () => {
     if (!favoriteContact) return <p>Loading...</p>
     if (!favoriteContact.length) return <WarningMessage>No favorite contact</WarningMessage>
@@ -170,6 +165,7 @@ const PhoneBook = () => {
         contact={contact}
         handleToggleContactOption={handleToggleContactOption}
         removeItemFromFavoriteContact={removeItemFromFavoriteContact}
+        deleteContactById={deleteContactById}
         isRegularContact={false}
       />
     ))
@@ -184,6 +180,7 @@ const PhoneBook = () => {
         contact={contact}
         handleToggleContactOption={handleToggleContactOption}
         addItemToFavoriteContact={addItemToFavoriteContact}
+        deleteContactById={deleteContactById}
         isRegularContact={true}
       />
     ))

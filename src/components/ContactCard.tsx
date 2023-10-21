@@ -8,6 +8,7 @@ interface ContactCardProps {
   handleToggleContactOption: (id: string) => () => void
   removeItemFromFavoriteContact?: (contact: Contact) => () => void
   addItemToFavoriteContact?: (contact: Contact) => () => void,
+  deleteContactById: (id: string) => () => void,
   isRegularContact?: boolean
 }
 
@@ -17,7 +18,8 @@ const ContactCard = (props: ContactCardProps) => {
     isRegularContact,
     handleToggleContactOption,
     removeItemFromFavoriteContact,
-    addItemToFavoriteContact
+    addItemToFavoriteContact,
+    deleteContactById
   } = props
   
   const CardWrapper = styled.div`
@@ -89,11 +91,11 @@ const ContactCard = (props: ContactCardProps) => {
         </ContactOptionButton>
         <ContactOption className='contact-option hidden' id={`contact-${contact.id}`}>
           { isRegularContact ? 
-            (<OptionItem onClick={addItemToFavoriteContact?.(contact)}>Add To Favorite</OptionItem>) : 
-            (<OptionItem onClick={removeItemFromFavoriteContact?.(contact)}>Remove From Favorite</OptionItem>)
+            (<OptionItem onClick={ addItemToFavoriteContact?.(contact) }>Add To Favorite</OptionItem>) : 
+            (<OptionItem onClick={ removeItemFromFavoriteContact?.(contact) }>Remove From Favorite</OptionItem>)
           }
           <OptionItem>Edit</OptionItem>
-          <OptionItem>Delete</OptionItem>
+          <OptionItem onClick={ deleteContactById(contact.id) }>Delete</OptionItem>
         </ContactOption>
       </ContactCardBody>
     </CardWrapper>
